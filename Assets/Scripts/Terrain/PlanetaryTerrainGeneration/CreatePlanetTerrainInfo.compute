@@ -1,0 +1,42 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+int _FaceID;
+int _FaceSize;
+
+int _Octaves;
+float _Frequency;
+float _Amplitude;
+
+RWStructuredBuffer<float4> _Result;
+
+#include "PlanetTerrainNoise.hlsl"
+
+float3 TexelToDirection(int face, int x, int y, int size) {
+    // +0.5 samples the texel centre, not its corner. Skipping this puts a
+    // half-texel skew in the pattern and breaks edge continuity. 
+    float u = 2.0 * ((x + 0.5) / size) - 1.0;   // -1 = left edge,  +1 = right edge
+    float v = 2.0 * ((y + 0.5) / size) - 1.0; // -1 = top edge,   +1 = bottom edge
+
+    if(face == 0) return normalize(float3( u,   1.0,   v));
+    if(face == 1) return normalize(float3( 1.0,  -v,  -u));
+    if(face == 2) return normalize(float3( u,  -1.0,  -v));
+    if(face == 3) return normalize(float3(-1.0,  -v,   u));
+    if(face == 4) return normalize(float3(-u,  -v,  -1.0));
+    if(face == 5) return normalize(float3( u,  -v,   1.0));
+    else return float3(0,0,0);
+
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x >= _FaceSize || id.y >= _FaceSize) return;
+    float3 spherePos = normalize(TexelToDirection(_FaceID, id.x, id.y, _FaceSize));
+    float3 color = GetPlanetHeight(spherePos);
+    float4 output = float4(color, 1.0);
+    
+    _Result[id.x + id.y * _FaceSize] = output;
+}

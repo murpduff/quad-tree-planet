@@ -1,0 +1,78 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+struct Vertex {
+    float height;
+    float3 normal;
+};
+
+RWStructuredBuffer<Vertex> _Vertices;
+
+int _MeshSize;
+int _FaceID;
+float3 _ChunkCenter;
+int _ChunkSize;
+float _PlanetRadius;
+float3 _PlanetCenter;
+
+int _Octaves;
+float _Frequency;
+float _Amplitude;
+
+#include "NoiseSimplex.hlsl"
+#include "NoiseTerrainGenerator.hlsl"
+#include "ReorientNormalTBN.hlsl"
+
+float3 GetLocalPos(int x, int y){
+    float3 localPos;
+
+    if(_FaceID == 0) localPos = float3(x, 0, y);
+    else if(_FaceID == 1) localPos = float3(0, -x, y);
+    else if(_FaceID == 2) localPos = float3(-x, 0, y);
+    else if(_FaceID == 3) localPos = float3(0, x, y);
+    else if(_FaceID == 4) localPos = float3(x, y, 0);
+    else if(_FaceID == 5) localPos = float3(x, -y, 0);
+
+    return localPos / (float)_MeshSize;
+}
+
+float3 Sphereify(float3 cubeWorldPos, float chunkScale) {
+    float3 dc = cubeWorldPos - _PlanetCenter;
+    float3 dh = normalize(dc) * (_PlanetRadius - length(dc));
+    
+    return dh;
+}
+
+float3 AdjustNormalToSphere(float3 normal, float3 sphereNormal){
+    float3 up = abs(sphereNormal.y) < 0.999 ? float3(0.0, 1.0, 0.0) : float3(1.0, 0.0, 0.0);
+    float3 tangent = normalize(cross(up, sphereNormal));
+
+    float3x3 planarTBN = BuildTBN(float3(0,1,0), float3(1,0,0));
+    float3x3 sphereTBN = BuildTBN(sphereNormal, tangent);
+    float3 outNormal = ReorientNormalTBN(normal, planarTBN, sphereTBN);
+
+    return outNormal;
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x >= _MeshSize + 1|| id.y >= _MeshSize + 1) return;
+
+    float3 localPos = GetLocalPos(id.x, id.y);
+
+    float3 cubeFacePos = localPos * _ChunkSize + _ChunkCenter;
+    float3 sphereWorldPos = cubeFacePos + Sphereify(cubeFacePos, _ChunkSize);
+
+    float3 sphereNormal = normalize(sphereWorldPos - _PlanetCenter);
+    float height = LayeredNoise(sphereWorldPos, _Octaves, _Frequency, _Amplitude) * _MeshSize; //multiplying by _Meshsize because of its multiplier in the shader (L.121) (At least I think so)
+    float3 normal = GetNoiseNormal(sphereWorldPos, sphereNormal, _Octaves, _Frequency, _Amplitude);
+    normal = AdjustNormalToSphere(normal, sphereNormal);
+
+    int index = id.x + id.y * (_MeshSize + 1);
+
+    _Vertices[index].height = height;
+    _Vertices[index].normal = normal;
+}
+
+

@@ -1,0 +1,35 @@
+{
+    "version": 1,
+    "name": "PlayerViewInput",
+    "maps": [
+        {
+            "name": "Player",
+            "id": "6c514f6e-5edc-4309-a1f2-cd1e29b9cf9c",
+            "actions": [
+                {
+                    "name": "Look",
+                    "type": "Value",
+                    "id": "01ded06c-5708-4ea6-93e8-82f569a857d1",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "abde0db2-548e-4279-a522-b287dfd2af20",
+                    "path": "<Pointer>/delta",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Look",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
