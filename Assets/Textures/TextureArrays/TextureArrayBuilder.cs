@@ -161,4 +161,4 @@ class TextureArrayBuilderEditor : Editor
 }
 #endif
 
-//thank you Claude
+//This script was written by Claude.

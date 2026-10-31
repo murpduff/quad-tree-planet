@@ -97,7 +97,7 @@ Shader "Custom/TerrainShader"
 
             HLSLPROGRAM
             #pragma vertex vert
-            #pragma fragment frag // Keep this...
+            #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -108,14 +108,12 @@ Shader "Custom/TerrainShader"
             Varyings vert(Attributes IN) {
                 Varyings OUT;
                 float3 worldPos = TransformObjectToWorld(IN.positionOS.xyz);
-                // Apply your curvature math here!
                 OUT.positionCS = TransformWorldToHClip(worldPos);
                 return OUT;
             }
 
-            // ...But you MUST define this function for the pragma above to work
             half4 frag(Varyings IN) : SV_Target { 
-                return 0; // The GPU ignores this because of ColorMask 0, but the compiler needs it.
+                return 0;
             }
             ENDHLSL
         }
@@ -137,7 +135,6 @@ Shader "Custom/TerrainShader"
             Varyings vert(Attributes IN) {
                 Varyings OUT;
                 float3 worldPos = TransformObjectToWorld(IN.positionOS.xyz);
-                // Apply Curvature here too!
                 OUT.positionCS = TransformWorldToHClip(worldPos);
                 OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
                 return OUT;

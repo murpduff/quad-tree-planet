@@ -98,3 +98,5 @@ float3 ReorientNormal(float3 n, float3 oldPlaneN, float3 newPlaneN)
     float3 c = cross(oldPlaneN, newPlaneN);
     return n * d + cross(c, n) + c * (dot(c, n) / (1.0 + d));
 }
+
+//This script was written by Claude.
