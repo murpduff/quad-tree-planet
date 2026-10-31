@@ -276,5 +276,5 @@ All code is my own unless listed below.
 - **YouTube tutorials:**
   - https://www.youtube.com/watch?v=vTMEdHcKgM4
   - https://www.youtube.com/watch?v=DxfEbulyFcY
-- **AI assistance (Claude and Gemini):** used to fix bugs, explain conceptual fixes in the code, introduce foundational concepts and algorithms, and write the boilerplate shader script that makes the material render correctly. The editor tool [`TextureArrayBuilder.cs`](Assets/Textures/TextureArrays/TextureArrayBuilder.cs) and ['ReorientNormalTBN.hlsl'](Assets/Scripts/Terrain/ReorientNormalTBN.hlsl) were written with Claude. Anthropic AI (Claude) was used to create this file under the directions of the author.
+- **AI assistance (Claude and Gemini):** used to fix bugs, explain conceptual fixes in the code, introduce foundational concepts and algorithms, and write the boilerplate shader script that makes the material render correctly. Two files were written by Claude: the texture-array editor tool [`TextureArrayBuilder.cs`](Assets/Textures/TextureArrays/TextureArrayBuilder.cs) and the normal-reorientation helper [`ReorientNormalTBN.hlsl`](Assets/Scripts/Terrain/ReorientNormalTBN.hlsl). Anthropic AI (Claude) was used to create this file under the directions of the author.
 - **Engine:** [Unity](https://unity.com/) 6 with the Universal Render Pipeline, the Input System, Mathematics and Collections.
