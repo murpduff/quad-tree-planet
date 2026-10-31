@@ -11,12 +11,9 @@
   <img alt="GPU" src="https://img.shields.io/badge/Compute%20Shaders%20%2B%20GPU%20Instancing-enabled-orange">
 </p>
 
-<!--
-  Hero image: add a screenshot at docs/screenshots/ and uncomment.
 <p align="center">
-  <img src="docs/screenshots/planet-surface.png" alt="Walking on the surface of the quad-tree planet" width="85%">
+  <img src="docs/screenshots/quadtree-lod.png" alt="Rings of terrain chunks shrinking toward the player, with mountains on the planet's horizon" width="85%">
 </p>
--->
 
 ---
 
@@ -24,6 +21,7 @@
 
 - [About](#about)
 - [From Space Ship Driver to Quad-Tree Planet](#from-space-ship-driver-to-quad-tree-planet)
+- [Screenshots](#screenshots)
 - [Technical Highlights](#technical-highlights)
   - [Quad-Tree Level of Detail on a Cube-Sphere](#1-quad-tree-level-of-detail-on-a-cube-sphere)
   - [GPU Integration in Mesh Generation](#2-gpu-integration-in-mesh-generation)
@@ -48,9 +46,7 @@ It covers:
 - **Lighting on a curved surface:** per-pixel normals computed from the noise gradient, rotated into the planet's local tangent frame, so even low-resolution distant chunks are lit with fine detail at almost no extra cost.
 - **Spherical gravity**, so the player can walk all the way around the planet.
 
-My goal is a to-scale planet that someone can explore, with every small detail on it reflecting my appreciation of the real world.
-
-> **Status:** work in progress. This fork focuses on terrain generation so far. The Rayleigh-scattering atmosphere from Space Ship Driver ([see its README](https://github.com/murpduff/space-ship-driver#1-atmospheric-scattering-rayleigh)) hasn't been ported to the planet yet.
+This project is a work in progress. This fork focuses on terrain generation so far. The Rayleigh-scattering atmosphere from Space Ship Driver ([see its README](https://github.com/murpduff/space-ship-driver#1-atmospheric-scattering-rayleigh)) hasn't been ported to the planet yet.
 
 ---
 
@@ -66,21 +62,18 @@ My goal is a to-scale planet that someone can explore, with every small detail o
 
 ---
 
-<!--
-  Screenshots: add images to docs/screenshots/, uncomment this section,
-  and add "- [Screenshots](#screenshots)" to the Table of Contents.
-
 ## Screenshots
+
+All screenshots are from the Unity editor with the wireframe overlay on, so the chunk boundaries are visible. The transform gizmo marks the player.
 
 | | |
 |:---:|:---:|
-| <img src="docs/screenshots/planet-orbit.png" alt="The full planet seen from space"> | <img src="docs/screenshots/planet-surface.png" alt="Ground-level view of the terrain"> |
-| **From orbit:** the whole planet, drawn mostly by GPU-instanced chunks | **On the surface:** high-detail chunks with physics colliders |
-| <img src="docs/screenshots/quadtree-wireframe.png" alt="Wireframe showing quad-tree chunk sizes"> | <img src="docs/screenshots/horizon.png" alt="Curved horizon from a mountain"> |
-| **Quad-tree LOD:** chunk size doubles with each step away from the player | **Curved horizon:** the terrain wraps around a sphere |
+| <img src="docs/screenshots/planet-orbit.png" alt="The planet seen from space with its chunk grid visible"> | <img src="docs/screenshots/planet-curvature.png" alt="The planet's surface curving away below the player"> |
+| **The planet from space:** the cube-sphere's chunks get smaller close to the player | **Low orbit:** the surface curves away toward the horizon; the darker lines mark chunk edges |
+| <img src="docs/screenshots/quadtree-lod.png" alt="Rings of terrain chunks shrinking toward the player"> | <img src="docs/screenshots/quadtree-top-down.png" alt="Top-down view of nested quad-tree chunks around the player"> |
+| **Quad-tree LOD:** chunks halve in size with each ring closer to the player. Green chunks are physics meshes; the white terrain beyond is GPU-instanced | **Top-down:** the nested squares of the quad tree around the player, with the GPU-instanced terrain on either side |
 
 ---
--->
 
 ## Technical Highlights
 
@@ -96,15 +89,7 @@ With a 12-level quad tree (`maxBranch = 12`), the planet has a radius of about *
 **How it works:**
 
 1. **Cube-sphere:** the planet starts as 6 root chunks, one per face of a cube. The planet radius is set to half of the cube's diagonal (`worldScale * √3 / 2`), so every point on the cube is pushed outward onto the sphere.
-2. **Split test:** each chunk's distance to the player is measured *in units of its own size*. If that distance falls under the `rangeByBranch` curve, the chunk splits into 4 children, each half as wide. This repeats down the tree, so detail concentrates around the player:
-   ```csharp
-   float dstToCenter = Vector3.Distance(player.position / meshSize, GetChunkCenter(chunk)) / scale;
-
-   if (dstToCenter <= rangeByBranch.Evaluate((float)chunk.branch / maxBranch) && chunk.branch > 0) {
-       // split into 4 children
-   }
-   ```
-   (Simplified: close to the ground, the distance is measured from the point on the sphere below the player, so jumping doesn't change the LOD.)
+2. **Split test:** each chunk's distance to the player is measured relative to its own size. If that distance falls under the `rangeByBranch` curve, the chunk splits into 4 children, each half as wide. This repeats down the tree, so detail concentrates around the player.
 3. **Scale:** each extra level (`maxBranch`) doubles the planet's radius while keeping 1 m detail at the player's feet.
 4. **No holes during LOD changes:** when chunks split or merge, the old meshes stay visible in a `PendingSwap` until their replacements have finished generating, and only then are they destroyed.
 5. **Skirts:** each chunk has an extra ring of vertices along its edge that drops below the surface, hiding the cracks between neighboring chunks at different resolutions.
@@ -113,7 +98,7 @@ With a 12-level quad tree (`maxBranch = 12`), the planet has a radius of about *
 
 ### 2. GPU Integration in Mesh Generation
 
-Every leaf of the quad tree goes down one of two GPU pipelines. Small chunks near the player (`branch ≤ physicsBranchThreshold`) need colliders, so they become real meshes. Everything else is drawn directly by the GPU and never exists as a mesh on the CPU.
+Every leaf of the quad tree goes down one of two GPU pipelines. Small chunks near the player (`branch ≤ physicsBranchThreshold`) need colliders, so they become real meshes. Everything else is drawn directly by the GPU and never exists as a mesh on the CPU. Both are visible in the [screenshots](#screenshots): the textured green chunks are physics meshes, and the white terrain around them is GPU-instanced (lit, but not textured yet).
 
 ```mermaid
 flowchart LR
@@ -131,19 +116,12 @@ flowchart LR
 | [`Assets/Scripts/Terrain/GPUChunkRenderer.cs`](Assets/Scripts/Terrain/GPUChunkRenderer.cs) | Uploads a list of 20-byte chunk descriptions to a `ComputeBuffer` per cube face and draws them all with one instanced draw call per face |
 | [`Assets/Scripts/Terrain/GPUTerrain.shader`](Assets/Scripts/Terrain/GPUTerrain.shader) | Vertex shader that turns a shared flat grid into spherical, noise-displaced terrain for each instance; fragment shader computes per-pixel normals |
 
-- **One mesh, reused for every chunk:** a single flat grid is generated per cube face at startup. Each far chunk is just a position, a size and a face ID, so the CPU never builds vertices, triangles or GameObjects for distant terrain.
+- **One mesh is reused for every chunk:** a single flat grid is generated per cube face at startup. Each far chunk is just a position, a size and a face ID, so the CPU never builds vertices, triangles or GameObjects for distant terrain.
 - **At most 6 draw calls** for the far terrain, no matter how many chunks there are:
   ```csharp
   Graphics.DrawMeshInstancedProcedural(baseGridMeshes[i], 0, gpuTerrainMat, planetBounds, activeCounts[i], propertyBlock);
   ```
-- **The vertex shader does the mesh generation.** It reads its chunk from the buffer using the instance ID, scales and places the grid on the cube face, projects it onto the sphere, and pushes it outward by the noise height:
-  ```hlsl
-  GPUChunkData chunk    = _ChunkBuffer[instanceID];
-  float3 cubeFacePos    = input.positionOS.xyz * chunk.size / _MeshSize + chunk.center;
-  float3 sphereWorldPos = cubeFacePos + Spherify(cubeFacePos, chunk.size);          // cube -> sphere
-  float3 sphereNormal   = normalize(sphereWorldPos - _PlanetCenter);
-  float3 planetWorldPos = sphereWorldPos + sphereNormal * GetHeight(sphereWorldPos); // add terrain
-  ```
+- **The vertex shader generates the mesh:** It reads its chunk from the buffer using the instance ID, scales and places the grid on the cube face, projects it onto the sphere, and pushes it outward by the noise height.
 - **Noise LOD:** far chunks evaluate fewer noise octaves (`gpuOctaves`) than near chunks, since the finest details can't be seen at a distance.
 
 #### Near terrain: compute shader + async readback
@@ -157,7 +135,7 @@ flowchart LR
 - **Non-blocking:** `AsyncGPUReadback` delivers the data a few frames later through a callback, so the game never stalls waiting for the GPU.
 - **Precision:** each chunk's transform is placed on the sphere's surface and its vertices are stored relative to it, which keeps vertex coordinates small on a large planet.
 
-#### One noise function, two pipelines
+#### The noise function
 
 | File | Role |
 |---|---|
@@ -281,6 +259,8 @@ To regenerate the planet cube map, tick `update` on the **PlanetTerrainGeneratio
 - [x] Compute-shader physics chunks with asynchronous readback
 - [x] Seamless chunk swaps and skirts between LOD levels
 - [x] Spherical gravity and walking around the planet
+- [ ] Integrate Planet-scale terrain map with terrain height generation
+- [ ] Texture the GPU-instanced far terrain to match the near chunks (it is currently lit but untextured)
 - [ ] Port the Rayleigh-scattering atmosphere from [Space Ship Driver](https://github.com/murpduff/space-ship-driver)
 - [ ] Use the planet cube map (continents, biomes) to shape the detailed surface terrain
 - [ ] Blend the normal-map texture arrays into terrain lighting (they're already sampled in `BaseTerrainGraphics.hlsl`)
@@ -296,5 +276,5 @@ All code is my own unless listed below.
 - **YouTube tutorials:**
   - https://www.youtube.com/watch?v=vTMEdHcKgM4
   - https://www.youtube.com/watch?v=DxfEbulyFcY
-- **AI assistance (Claude and Gemini):** used to fix bugs, explain conceptual fixes in the code, introduce foundational concepts and algorithms, and write the boilerplate shader script that makes the material render correctly. The editor tool [`TextureArrayBuilder.cs`](Assets/Textures/TextureArrays/TextureArrayBuilder.cs) was written with Claude. Anthropic AI (Claude) was used to create this file under the directions of the author.
+- **AI assistance (Claude and Gemini):** used to fix bugs, explain conceptual fixes in the code, introduce foundational concepts and algorithms, and write the boilerplate shader script that makes the material render correctly. The editor tool [`TextureArrayBuilder.cs`](Assets/Textures/TextureArrays/TextureArrayBuilder.cs) and ['ReorientNormalTBN.hlsl'](Assets/Scripts/Terrain/ReorientNormalTBN.hlsl) were written with Claude. Anthropic AI (Claude) was used to create this file under the directions of the author.
 - **Engine:** [Unity](https://unity.com/) 6 with the Universal Render Pipeline, the Input System, Mathematics and Collections.
